@@ -38,8 +38,7 @@ import {
   Phone,
   Scan,
   Info,
-  Copy,
-  History
+  Copy
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import '../styles/AdminLogin.css';
@@ -85,9 +84,6 @@ const AdminLogin = () => {
   const [showHelp, setShowHelp] = useState(false);
   const [lastLogin, setLastLogin] = useState(null);
   
-  // Historique des connexions
-  const [loginHistory, setLoginHistory] = useState([]);
-
   // Effet de parallaxe
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -118,24 +114,18 @@ const AdminLogin = () => {
     return () => clearInterval(interval);
   }, [otpTimer, showOtpInput]);
 
-  // Charger la dernière connexion et l'historique
+  // Charger la dernière connexion
   useEffect(() => {
     const saved = localStorage.getItem('lastAdminLogin');
     if (saved) {
       setLastLogin(JSON.parse(saved));
     }
-    
-    // Charger l'historique des connexions
-    const history = localStorage.getItem('loginHistory');
-    if (history) {
-      setLoginHistory(JSON.parse(history));
-    }
 
-    // Rediriger si déjà connecté
-    const token = localStorage.getItem('token');
-    if (token) {
-      navigate('/admin/dashboard');
-    }
+    // Rediriger si déjà connecté (optionnel - à décommenter si besoin)
+    // const token = localStorage.getItem('token');
+    // if (token) {
+    //   navigate('/admin/dashboard');
+    // }
   }, [navigate]);
 
   // Éléments flottants
@@ -288,51 +278,55 @@ const AdminLogin = () => {
     }, 3000);
   };
 
-  // ===== CONNEXION SIMULATION AVEC HISTORIQUE ET REDIRECTION =====
-  const handleSubmit = (e) => {
+  // ===== CONNEXION RÉELLE AVEC BACKEND =====
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      if (email === 'kawther@gmail.com' && password === 'kawther123') {
+    try {
+      console.log('📡 Tentative de connexion vers le backend...');
+      
+      const response = await fetch('http://localhost:5000/api/auth/admin/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
+      });
+
+      console.log('📊 Status:', response.status);
+      const data = await response.json();
+      console.log('📦 Réponse:', data);
+
+      if (response.ok && data.success) {
+        // Sauvegarder le token
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
         
-        // Créer l'entrée de connexion pour l'historique
+        // Sauvegarder la dernière connexion
         const loginEntry = {
           timestamp: new Date().toISOString(),
-          method: loginMethod,
           email: email,
           success: true
         };
-        
-        // Sauvegarder la dernière connexion
         localStorage.setItem('lastAdminLogin', JSON.stringify(loginEntry));
         
-        // Récupérer l'historique existant
-        const existingHistory = localStorage.getItem('loginHistory');
-        let history = [];
-        
-        if (existingHistory) {
-          history = JSON.parse(existingHistory);
-        }
-        
-        // Ajouter la nouvelle connexion au début
-        const updatedHistory = [loginEntry, ...history].slice(0, 10);
-        
-        // Sauvegarder l'historique mis à jour
-        localStorage.setItem('loginHistory', JSON.stringify(updatedHistory));
-        
-        // Mettre à jour l'état
-        setLoginHistory(updatedHistory);
-        
-        // ✅ REDIRECTION VERS LE DASHBOARD
+        // Redirection vers le dashboard
         navigate('/admin/dashboard');
         
       } else {
-        setError('Email ou mot de passe incorrect');
+        setError(data.message || 'Email ou mot de passe incorrect');
       }
+    } catch (err) {
+      console.error('❌ Erreur:', err);
+      setError('Impossible de contacter le serveur. Vérifiez que le backend tourne sur http://localhost:5000');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleBackToMethods = () => {
@@ -465,47 +459,9 @@ const AdminLogin = () => {
           transition={{ delay: 2.4 }}
         >
           <RefreshCw size={14} color="#C4A962" />
-          <span>Dernière: {new Date(lastLogin.timestamp).toLocaleDateString('fr-FR')} à {new Date(lastLogin.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <span>Dernière connexion: {new Date(lastLogin.timestamp).toLocaleDateString('fr-FR')} à {new Date(lastLogin.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
         </motion.div>
       )}
-
-      {/* Historique des connexions */}
-      <motion.div 
-        className="login-history"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 2.6 }}
-      >
-        <div className="history-header">
-          <History size={12} color="#C4A962" />
-          <span>Historique des connexions</span>
-        </div>
-        <div className="history-list">
-          {loginHistory.length > 0 ? (
-            loginHistory.map((entry, index) => (
-              <div key={index} className="history-item">
-                <Clock size={10} color="#C4A962" />
-                <span className="history-date">
-                  {new Date(entry.timestamp).toLocaleDateString('fr-FR')}
-                </span>
-                <span className="history-time">
-                  {new Date(entry.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                </span>
-                <span className="history-method" style={{ 
-                  backgroundColor: entry.method === 'password' ? '#1E3A8A' : 
-                                 entry.method === 'otp' ? '#2E7D73' : '#C4A962' 
-                }}>
-                  {entry.method === 'password' ? '🔐' : entry.method === 'otp' ? '📱' : '🔑'}
-                </span>
-              </div>
-            ))
-          ) : (
-            <div className="history-empty">
-              Aucune connexion récente
-            </div>
-          )}
-        </div>
-      </motion.div>
 
       {/* Carte de login */}
       <motion.div 
@@ -757,7 +713,7 @@ const AdminLogin = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
-                  placeholder="kawther@gmail.com"
+                  placeholder="admin@hse.tn"
                   required
                 />
                 {email && (
@@ -881,7 +837,7 @@ const AdminLogin = () => {
                       type="email"
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
-                      placeholder="admin@srtb.tn"
+                      placeholder="admin@hse.tn"
                       required
                     />
                   </div>
@@ -949,7 +905,7 @@ const AdminLogin = () => {
                 </div>
                 <div className="support-item">
                   <Mail size={12} color="#C4A962" />
-                  <span>support.admin@srtb.tn</span>
+                  <span>support.admin@hse.tn</span>
                 </div>
                 <div className="support-item">
                   <MessageCircle size={12} color="#C4A962" />

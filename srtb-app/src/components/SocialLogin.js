@@ -50,7 +50,7 @@ const SocialLogin = () => {
   const [focusedField, setFocusedField] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  // États pour les fonctionnalités avancées
+  // États pour les fonctionnalités avancées (gardés pour l'UI mais non fonctionnels)
   const [loginMethod, setLoginMethod] = useState('password');
   
   // CODE OTP
@@ -135,7 +135,7 @@ const SocialLogin = () => {
     { id: 'qrcode', icon: QrCode, label: 'QR Code' }
   ];
 
-  // ===== FONCTIONNALITÉS AVANCÉES =====
+  // ===== FONCTIONNALITÉS AVANCÉES (GARDÉES POUR L'UI) =====
 
   const generateOtp = () => {
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -258,30 +258,60 @@ const SocialLogin = () => {
     }, 3000);
   };
 
+  // ===== CONNEXION RÉELLE AU BACKEND =====
   const handleSuccessfulLogin = () => {
     setIsLoading(false);
-    const loginData = {
-      timestamp: new Date().toISOString(),
-      method: loginMethod,
-      email: email || 'social@srtb.tn'
-    };
-    localStorage.setItem('lastSocialLogin', JSON.stringify(loginData));
     navigate('/social/dashboard');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      if (email === 'social@srtb.tn' && password === 'social123') {
-        handleSuccessfulLogin();
+    try {
+      console.log('📡 Tentative de connexion social...');
+      
+      const response = await fetch('http://localhost:5000/api/auth/social/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+      console.log('📦 Réponse:', data);
+
+      if (response.ok && data.success) {
+        // Sauvegarder le token JWT
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Sauvegarder la dernière connexion
+        const loginData = {
+          timestamp: new Date().toISOString(),
+          method: loginMethod,
+          email: email,
+          success: true
+        };
+        localStorage.setItem('lastSocialLogin', JSON.stringify(loginData));
+        
+        // Redirection vers le dashboard
+        navigate('/social/dashboard');
+        
       } else {
-        setError('Email ou mot de passe incorrect');
+        setError(data.message || 'Email ou mot de passe incorrect');
       }
+    } catch (err) {
+      console.error('❌ Erreur:', err);
+      setError('Erreur de connexion au serveur');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleBackToMethods = () => {
@@ -650,6 +680,7 @@ const SocialLogin = () => {
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="social@srtb.tn"
+                  required
                 />
                 {email && (
                   <motion.div 
@@ -677,6 +708,7 @@ const SocialLogin = () => {
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="••••••••"
+                  required
                 />
                 <button
                   type="button"

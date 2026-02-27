@@ -73,7 +73,7 @@ const TechnicienLogin = () => {
   const [qrScanned, setQrScanned] = useState(false);
   const [qrCodeValue, setQrCodeValue] = useState('');
   
-  // Statistiques (pour rendre la page plus professionnelle)
+  // Statistiques
   const [stats, setStats] = useState({
     todayReports: 24,
     pendingTasks: 7,
@@ -125,7 +125,7 @@ const TechnicienLogin = () => {
     }
   }, []);
 
-  // Éléments flottants modernes
+  // Éléments flottants
   const floatingElements = [
     { id: 1, icon: FileText, color: '#C4A962', size: 32, delay: 0, top: '15%', left: '10%' },
     { id: 2, icon: Users, color: '#2E7D73', size: 28, delay: 0.5, top: '70%', left: '15%' },
@@ -268,28 +268,63 @@ const TechnicienLogin = () => {
 
   const handleSuccessfulLogin = () => {
     setIsLoading(false);
-    const loginData = {
-      timestamp: new Date().toISOString(),
-      method: loginMethod,
-      email: email || 'technicien@srtb.tn'
-    };
-    localStorage.setItem('lastTechnicienLogin', JSON.stringify(loginData));
     navigate('/technicien/dashboard');
   };
 
-  const handleSubmit = (e) => {
+  // ===== CONNEXION RÉELLE AVEC BACKEND =====
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      if (email === 'technicien@srtb.tn' && password === 'technicien123') {
-        handleSuccessfulLogin();
+    try {
+      console.log('📡 Tentative de connexion technicien...');
+      console.log('📧 Email:', email);
+      
+      const response = await fetch('http://localhost:5000/api/auth/technicien/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
+      });
+
+      console.log('📊 Status:', response.status);
+      const data = await response.json();
+      console.log('📦 Réponse:', data);
+
+      if (response.ok && data.success) {
+        // ✅ SAUVEGARDER LE VRAI TOKEN JWT
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Sauvegarder la dernière connexion
+        const loginData = {
+          timestamp: new Date().toISOString(),
+          method: loginMethod,
+          email: email,
+          success: true
+        };
+        localStorage.setItem('lastTechnicienLogin', JSON.stringify(loginData));
+        
+        console.log('✅ Token sauvegardé:', data.token.substring(0, 20) + '...');
+        console.log('✅ Utilisateur:', data.user);
+        
+        // Redirection vers le dashboard
+        navigate('/technicien/dashboard');
+        
       } else {
-        setError('Email ou mot de passe incorrect');
+        setError(data.message || 'Email ou mot de passe incorrect');
       }
+    } catch (err) {
+      console.error('❌ Erreur:', err);
+      setError('Erreur de connexion au serveur. Vérifiez que le backend tourne sur http://localhost:5000');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
   const handleBackToMethods = () => {
@@ -366,7 +401,7 @@ const TechnicienLogin = () => {
           </motion.div>
         ))}
 
-        {/* Bouton retour Accueil - DORÉ */}
+        {/* Bouton retour Accueil */}
         <motion.a
           href="/"
           className="floating-back"
@@ -678,6 +713,7 @@ const TechnicienLogin = () => {
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="technicien@srtb.tn"
+                  required
                 />
                 {email && <CheckCircle size={16} color="#2E7D73" className="field-valid" />}
               </div>
@@ -697,6 +733,7 @@ const TechnicienLogin = () => {
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="••••••••"
+                  required
                 />
                 <button
                   type="button"

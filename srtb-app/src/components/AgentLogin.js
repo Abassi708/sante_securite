@@ -46,10 +46,10 @@ const AgentLogin = () => {
   const [focusedField, setFocusedField] = useState(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-  // États pour les fonctionnalités avancées
+  // États pour les fonctionnalités avancées (gardés pour l'UI)
   const [loginMethod, setLoginMethod] = useState('password');
   
-  // CODE OTP - Dynamique
+  // CODE OTP
   const [otpCode, setOtpCode] = useState(['', '', '', '', '', '']);
   const [otpTimer, setOtpTimer] = useState(60);
   const [showOtpInput, setShowOtpInput] = useState(false);
@@ -62,7 +62,7 @@ const AgentLogin = () => {
   const [biometricScanning, setBiometricScanning] = useState(false);
   const [biometricSuccess, setBiometricSuccess] = useState(false);
   
-  // QR CODE - Dynamique
+  // QR CODE
   const [showQrCode, setShowQrCode] = useState(false);
   const [qrScanned, setQrScanned] = useState(false);
   const [qrCodeValue, setQrCodeValue] = useState('');
@@ -130,11 +130,9 @@ const AgentLogin = () => {
     { id: 'qrcode', icon: QrCode, label: 'QR Code', color: '#8B5CF6' }
   ];
 
-  // ===== FONCTIONNALITÉS AVANCÉES DYNAMIQUES =====
+  // ===== FONCTIONNALITÉS AVANCÉES (GARDÉES POUR L'UI) =====
 
-  // 1. CODE OTP - GÉNÉRATION DYNAMIQUE
   const generateOtp = () => {
-    // Génère un code à 6 chiffres aléatoire (ex: 482731)
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
     setGeneratedOtp(otp);
     console.log(`[SIMULATION] Code OTP envoyé à ${email || 'l\'agent'}: ${otp}`);
@@ -150,10 +148,7 @@ const AgentLogin = () => {
     setOtpVerified(false);
     setError('');
     
-    // Générer un nouveau code OTP
     const newOtp = generateOtp();
-    
-    // Dans une vraie application, ici on enverrait le code par SMS/Email
     alert(`[SIMULATION] Code OTP envoyé: ${newOtp}`);
   };
 
@@ -167,7 +162,6 @@ const AgentLogin = () => {
         document.getElementById(`otp-${index + 1}`).focus();
       }
 
-      // Vérification automatique quand les 6 chiffres sont saisis
       const enteredOtp = newOtp.join('');
       if (enteredOtp.length === 6) {
         if (enteredOtp === generatedOtp) {
@@ -176,8 +170,7 @@ const AgentLogin = () => {
             handleSuccessfulLogin();
           }, 1500);
         } else {
-          setError('Code OTP incorrect. Veuillez réessayer.');
-          // Réinitialiser les champs après erreur
+          setError('Code OTP incorrect');
           setTimeout(() => {
             setOtpCode(['', '', '', '', '', '']);
             document.getElementById('otp-0').focus();
@@ -197,49 +190,37 @@ const AgentLogin = () => {
     setOtpTimer(60);
     setOtpCode(['', '', '', '', '', '']);
     setError('');
-    
-    // Générer un nouveau code
     const newOtp = generateOtp();
     alert(`[SIMULATION] Nouveau code OTP envoyé: ${newOtp}`);
   };
 
-  // 2. BIOMÉTRIE - SIMULATION RÉALISTE
   const handleBiometricMethod = () => {
     setLoginMethod('biometric');
     setBiometricScanning(true);
     setError('');
     
-    // Simulation du scan biométrique
     setTimeout(() => {
       setBiometricScanning(false);
-      
-      // 90% de chance de succès pour la simulation
       const success = Math.random() < 0.9;
-      
       if (success) {
         setBiometricSuccess(true);
         setTimeout(() => {
           handleSuccessfulLogin();
         }, 1500);
       } else {
-        setError('Empreinte non reconnue. Veuillez réessayer.');
+        setError('Empreinte non reconnue');
         setBiometricScanning(false);
         setLoginMethod('password');
       }
     }, 3000);
   };
 
-  // 3. QR CODE - GÉNÉRATION DYNAMIQUE
   const generateQrCode = () => {
-    // Génère un identifiant unique pour la session
     const sessionId = Math.random().toString(36).substring(2, 15).toUpperCase();
     const agentId = 'AG' + Math.floor(1000 + Math.random() * 9000);
     const timestamp = Date.now().toString(36).substring(0, 4).toUpperCase();
-    
-    // Format: SRTB-AG-{agentId}-{sessionId}-{timestamp}
     const qrData = `SRTB-AG-${agentId}-${sessionId}-${timestamp}`;
     setQrCodeValue(qrData);
-    console.log(`[SIMULATION] QR Code généré pour l'agent: ${qrData}`);
     return qrData;
   };
 
@@ -248,15 +229,11 @@ const AgentLogin = () => {
     setShowQrCode(true);
     setQrScanned(false);
     setError('');
-    
-    // Générer un nouveau QR Code
     generateQrCode();
     
-    // Simulation du scan QR (après 4 secondes)
     setTimeout(() => {
-      if (showQrCode) {  // Vérifier qu'on est toujours sur l'écran QR
+      if (showQrCode) {
         setQrScanned(true);
-        
         setTimeout(() => {
           handleSuccessfulLogin();
         }, 2000);
@@ -266,18 +243,12 @@ const AgentLogin = () => {
 
   const copyQrCode = () => {
     navigator.clipboard.writeText(qrCodeValue);
-    // Feedback visuel (optionnel)
     alert('Code copié dans le presse-papiers');
   };
 
-  // Réinitialisation du mot de passe
   const handleResetPassword = (e) => {
     e.preventDefault();
     setResetSent(true);
-    
-    // Simulation d'envoi d'email
-    console.log(`[SIMULATION] Email de réinitialisation envoyé à ${resetEmail}`);
-    
     setTimeout(() => {
       setShowForgotPassword(false);
       setResetSent(false);
@@ -285,38 +256,62 @@ const AgentLogin = () => {
     }, 3000);
   };
 
-  // Connexion réussie
+  // ===== CONNEXION RÉELLE AU BACKEND =====
   const handleSuccessfulLogin = () => {
     setIsLoading(false);
-    const loginData = {
-      timestamp: new Date().toISOString(),
-      method: loginMethod,
-      email: email || 'agent@srtb.tn'
-    };
-    localStorage.setItem('lastAgentLogin', JSON.stringify(loginData));
-    
-    // Redirection vers le dashboard
     navigate('/agent/dashboard');
   };
 
-  // Soumission du formulaire principal
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
 
-    setTimeout(() => {
-      // Vérification des identifiants (simulée)
-      if (email === 'agent@srtb.tn' && password === 'agent123') {
-        handleSuccessfulLogin();
+    try {
+      console.log('📡 Tentative de connexion agent...');
+      
+      const response = await fetch('http://localhost:5000/api/auth/agent/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+      console.log('📦 Réponse:', data);
+
+      if (response.ok && data.success) {
+        // Sauvegarder le token JWT
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Sauvegarder la dernière connexion
+        const loginData = {
+          timestamp: new Date().toISOString(),
+          method: loginMethod,
+          email: email,
+          success: true
+        };
+        localStorage.setItem('lastAgentLogin', JSON.stringify(loginData));
+        
+        // Redirection vers le dashboard
+        navigate('/agent/dashboard');
+        
       } else {
-        setError('Email ou mot de passe incorrect');
+        setError(data.message || 'Email ou mot de passe incorrect');
       }
+    } catch (err) {
+      console.error('❌ Erreur:', err);
+      setError('Erreur de connexion au serveur');
+    } finally {
       setIsLoading(false);
-    }, 1500);
+    }
   };
 
-  // Retour à la méthode par défaut
   const handleBackToMethods = () => {
     setShowOtpInput(false);
     setShowQrCode(false);
@@ -519,7 +514,7 @@ const AgentLogin = () => {
           </div>
         )}
 
-        {/* Interface CODE OTP avec code dynamique */}
+        {/* Interface CODE OTP */}
         {showOtpInput && (
           <motion.div
             className="otp-interface"
@@ -579,12 +574,11 @@ const AgentLogin = () => {
               </button>
             </div>
 
-            {/* Indication discrète que le code est dans la console/alerte */}
             <p className="otp-hint">Un code vous a été envoyé (voir alerte)</p>
           </motion.div>
         )}
 
-        {/* Interface QR CODE avec code dynamique */}
+        {/* Interface QR CODE */}
         {showQrCode && (
           <motion.div
             className="qrcode-interface"
@@ -712,6 +706,7 @@ const AgentLogin = () => {
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="agent@srtb.tn"
+                  required
                 />
                 {email && (
                   <motion.div 
@@ -739,6 +734,7 @@ const AgentLogin = () => {
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="••••••••"
+                  required
                 />
                 <button
                   type="button"

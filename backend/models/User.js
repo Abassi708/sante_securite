@@ -1,4 +1,3 @@
-// backend/models/User.js
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/database');
 const bcrypt = require('bcryptjs');
@@ -35,10 +34,10 @@ const User = sequelize.define('User', {
   timestamps: false
 });
 
-// Créer un admin
-User.createAdmin = async (email, password, matricule = 1) => {
+// Créer un utilisateur
+User.createUser = async (email, password, role = 'agent', matricule = 1) => {
   try {
-    console.log('📝 Création admin:', { email, matricule });
+    console.log('📝 Création utilisateur:', { email, role, matricule });
     
     // Hasher le mot de passe
     const salt = await bcrypt.genSalt(parseInt(process.env.BCRYPT_ROUNDS));
@@ -48,18 +47,21 @@ User.createAdmin = async (email, password, matricule = 1) => {
     const user = await User.create({
       Login: email,
       Mot_de_passe: hashedPassword,
-      Role: 'admin',
+      Role: role,
       matricule_agent: parseInt(matricule)
     });
     
-    console.log('✅ Admin créé avec ID:', user.Id_utilisateur);
+    console.log('✅ Utilisateur créé avec ID:', user.Id_utilisateur);
     return user;
     
   } catch (error) {
-    console.error('❌ Erreur création admin:', error);
+    console.error('❌ Erreur création utilisateur:', error);
     throw error;
   }
 };
+
+// Alias pour créer un admin (pour la compatibilité)
+User.createAdmin = User.createUser;
 
 // Vérifier les identifiants
 User.verifyCredentials = async (email, password) => {
